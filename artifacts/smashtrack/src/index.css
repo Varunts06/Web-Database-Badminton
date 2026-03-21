@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: 'DM Sans', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+
+  --color-background: #020617; /* slate-950 */
+  --color-foreground: #f8fafc; /* slate-50 */
+  
+  --color-card: #0f172a; /* slate-900 */
+  --color-card-foreground: #f8fafc;
+  
+  --color-popover: #0f172a;
+  --color-popover-foreground: #f8fafc;
+  
+  --color-primary: #10b981; /* emerald-500 */
+  --color-primary-foreground: #022c22; /* emerald-950 */
+  
+  --color-secondary: #1e293b; /* slate-800 */
+  --color-secondary-foreground: #f8fafc;
+  
+  --color-muted: #1e293b;
+  --color-muted-foreground: #94a3b8; /* slate-400 */
+  
+  --color-accent: #34d399; /* emerald-400 */
+  --color-accent-foreground: #022c22;
+  
+  --color-destructive: #ef4444; /* red-500 */
+  --color-destructive-foreground: #f8fafc;
+  
+  --color-border: #1e293b; /* slate-800 */
+  --color-input: #1e293b;
+  --color-ring: #10b981;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased font-sans selection:bg-primary/30 selection:text-primary-foreground;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight text-white;
+  }
+  
+  /* Custom scrollbar for webkit */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-800 rounded-full hover:bg-slate-700 transition-colors;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-slate-900/60 backdrop-blur-xl border border-slate-800 shadow-xl;
+  }
+  
+  .glow-effect {
+    @apply relative;
+  }
+  .glow-effect::before {
+    content: '';
+    @apply absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-20 transition duration-500;
+    z-index: -1;
+  }
+  .glow-effect:hover::before {
+    @apply opacity-50;
+  }
+}

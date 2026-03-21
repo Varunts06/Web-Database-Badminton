@@ -1,0 +1,16 @@
+packages:
+  "framer-motion": "Smooth page transitions, layout animations, and interactive modals"
+  "date-fns": "Easy and consistent date formatting across the app"
+  "lucide-react": "Beautiful consistent iconography"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to efficiently merge Tailwind CSS classes"
+
+images:
+  - path: "artifacts/smashtrack/public/images/hero-bg.png"
+    description: "Abstract cinematic background for a badminton app, deep dark slate and black tones with subtle glowing neon green geometric lines mimicking a court and racket strings, premium dark mode aesthetic"
+    aspect_ratio: "16:9"
+
+notes:
+  - Using generated Orval hooks directly from @workspace/api-client-react for TanStack Query data fetching and mutations.
+  - The UI uses a hybrid navigation approach: bottom tab bar for mobile, persistent sidebar for desktop to ensure responsiveness.
+  - Custom Framer Motion powered Modal component is used instead of shadcn dialogs to ensure absolute stability and perfect animation control without dependency conflicts.

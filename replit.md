@@ -21,7 +21,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server
+│   └── smashtrack/         # SmashTrack React + Vite frontend
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
@@ -34,6 +35,31 @@ artifacts-monorepo/
 ├── tsconfig.json           # Root TS project references
 └── package.json            # Root package with hoisted devDeps
 ```
+
+## SmashTrack App
+
+**SmashTrack** is a Badminton Match Tracker for a fixed friend group.
+
+### Players
+- 5 fixed members: Varun, Neeraj, Vivaan, Bhaskar, Lakshy
+- 1 optional guest player per session (entered on game day)
+
+### Features
+1. **Dashboard** — View all player balances, add guest players, manual deposits
+2. **Sessions/Matches** — Create game sessions, add doubles matches (pick teams), record winner, auto-settle bets
+3. **Court Booking** — Record who paid the 200rs court fee, auto-deduct 50rs from each of the other 3 players
+4. **History** — Full transaction log
+
+### Bet Rules
+- Match bet: 20rs total per match (each loser pays 10rs to each winner)
+- Court fee: 200rs split 4 ways (50rs each); payer gets reimbursed 150rs from other 3
+
+### DB Schema
+- `players` — player info + balance
+- `sessions` — game day sessions (date + optional guest name)
+- `matches` — doubles matches within sessions
+- `bets` — all financial transactions (match bets + court booking debts)
+- `court_bookings` — court booking records
 
 ## TypeScript & Composite Projects
 
@@ -56,41 +82,20 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 
 - Entry: `src/index.ts` — reads `PORT`, starts Express
 - App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
+- Routes: `src/routes/index.ts`, `health.ts`, `players.ts`, `sessions.ts`, `matches.ts`, `bets.ts`, `court_bookings.ts`
 - Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+
+### `artifacts/smashtrack` (`@workspace/smashtrack`)
+
+React + Vite frontend for SmashTrack. Uses React Query for data fetching.
+
+- Pages: Dashboard, Sessions, SessionDetail, CourtBookings, History
+- Components: Layout (sidebar + mobile bottom nav), Modal
+- Styling: Tailwind CSS with dark sports theme (green primary)
 
 ### `lib/db` (`@workspace/db`)
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+Database layer using Drizzle ORM with PostgreSQL.
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- Schema: `players`, `sessions`, `matches`, `bets`, `court_bookings`
+- Dev: `pnpm --filter @workspace/db run push`

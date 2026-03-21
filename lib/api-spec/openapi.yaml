@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: SmashTrack - Badminton Match Tracker API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: players
+    description: Player management
+  - name: sessions
+    description: Game session management
+  - name: matches
+    description: Match management
+  - name: bets
+    description: Bet tracking
+  - name: courtBookings
+    description: Court booking management
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,223 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /players:
+    get:
+      operationId: getPlayers
+      tags: [players]
+      summary: Get all players
+      responses:
+        "200":
+          description: List of players
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Player"
+    post:
+      operationId: createPlayer
+      tags: [players]
+      summary: Create a new player
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlayerRequest"
+      responses:
+        "201":
+          description: Player created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+
+  /players/{id}:
+    get:
+      operationId: getPlayer
+      tags: [players]
+      summary: Get a player by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Player found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "404":
+          description: Player not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updatePlayerBalance
+      tags: [players]
+      summary: Update player balance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBalanceRequest"
+      responses:
+        "200":
+          description: Balance updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+
+  /sessions:
+    get:
+      operationId: getSessions
+      tags: [sessions]
+      summary: Get all game sessions
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Create a new game session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get session details with matches
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session with matches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+
+  /matches:
+    post:
+      operationId: createMatch
+      tags: [matches]
+      summary: Create a new match within a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMatchRequest"
+      responses:
+        "201":
+          description: Match created and bets settled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+
+  /matches/{id}:
+    get:
+      operationId: getMatch
+      tags: [matches]
+      summary: Get a match by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+
+  /bets:
+    get:
+      operationId: getBets
+      tags: [bets]
+      summary: Get all bets / balance transactions
+      responses:
+        "200":
+          description: List of bets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bet"
+
+  /court-bookings:
+    get:
+      operationId: getCourtBookings
+      tags: [courtBookings]
+      summary: Get all court bookings
+      responses:
+        "200":
+          description: List of court bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CourtBooking"
+    post:
+      operationId: createCourtBooking
+      tags: [courtBookings]
+      summary: Create a court booking (200rs fee, other 3 players owe 50rs each)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCourtBookingRequest"
+      responses:
+        "201":
+          description: Court booking created and debts settled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourtBooking"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +259,293 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Player:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        balance:
+          type: number
+        isFixed:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - balance
+        - isFixed
+        - createdAt
+
+    CreatePlayerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        isFixed:
+          type: boolean
+      required:
+        - name
+
+    UpdateBalanceRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+        description:
+          type: string
+      required:
+        - amount
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        guestPlayerName:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - date
+        - createdAt
+
+    CreateSessionRequest:
+      type: object
+      properties:
+        date:
+          type: string
+        guestPlayerName:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required:
+        - date
+
+    SessionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        guestPlayerName:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+      required:
+        - id
+        - date
+        - createdAt
+        - matches
+
+    Match:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: integer
+        team1Player1Id:
+          type: integer
+        team1Player2Id:
+          type: integer
+        team2Player1Id:
+          type: integer
+        team2Player2Id:
+          type: integer
+        team1Player1Name:
+          type: string
+        team1Player2Name:
+          type: string
+        team2Player1Name:
+          type: string
+        team2Player2Name:
+          type: string
+        winnerTeam:
+          type: integer
+          nullable: true
+        betAmount:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - sessionId
+        - team1Player1Id
+        - team1Player2Id
+        - team2Player1Id
+        - team2Player2Id
+        - team1Player1Name
+        - team1Player2Name
+        - team2Player1Name
+        - team2Player2Name
+        - betAmount
+        - createdAt
+
+    CreateMatchRequest:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+        team1Player1Id:
+          type: integer
+        team1Player2Id:
+          type: integer
+        team2Player1Id:
+          type: integer
+        team2Player2Id:
+          type: integer
+        winnerTeam:
+          type: integer
+          nullable: true
+        betAmount:
+          type: number
+      required:
+        - sessionId
+        - team1Player1Id
+        - team1Player2Id
+        - team2Player1Id
+        - team2Player2Id
+        - betAmount
+
+    Bet:
+      type: object
+      properties:
+        id:
+          type: integer
+        matchId:
+          type: integer
+          nullable: true
+        courtBookingId:
+          type: integer
+          nullable: true
+        fromPlayerId:
+          type: integer
+        toPlayerId:
+          type: integer
+        fromPlayerName:
+          type: string
+        toPlayerName:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - fromPlayerId
+        - toPlayerId
+        - fromPlayerName
+        - toPlayerName
+        - amount
+        - description
+        - createdAt
+
+    CourtBooking:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: integer
+          nullable: true
+        payerId:
+          type: integer
+        payerName:
+          type: string
+        totalAmount:
+          type: number
+        player1Id:
+          type: integer
+        player2Id:
+          type: integer
+        player3Id:
+          type: integer
+        player4Id:
+          type: integer
+        player1Name:
+          type: string
+        player2Name:
+          type: string
+        player3Name:
+          type: string
+        player4Name:
+          type: string
+        date:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - payerId
+        - payerName
+        - totalAmount
+        - player1Id
+        - player2Id
+        - player3Id
+        - player4Id
+        - player1Name
+        - player2Name
+        - player3Name
+        - player4Name
+        - date
+        - createdAt
+
+    CreateCourtBookingRequest:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+          nullable: true
+        payerId:
+          type: integer
+        player1Id:
+          type: integer
+        player2Id:
+          type: integer
+        player3Id:
+          type: integer
+        player4Id:
+          type: integer
+        totalAmount:
+          type: number
+        date:
+          type: string
+      required:
+        - payerId
+        - player1Id
+        - player2Id
+        - player3Id
+        - player4Id
+        - totalAmount
+        - date

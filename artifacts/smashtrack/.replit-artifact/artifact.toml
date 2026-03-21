@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "SmashTrack - Badminton Match Tracker"
+version = "1.0.0"
+id = "artifacts/smashtrack"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25826
+
+[services.development]
+run = "pnpm --filter @workspace/smashtrack run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/smashtrack", "run", "build" ]
+publicDir = "artifacts/smashtrack/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25826"
+BASE_PATH = "/"
