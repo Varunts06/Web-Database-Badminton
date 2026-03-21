@@ -5,6 +5,7 @@
  * SmashTrack - Badminton Match Tracker API
  * OpenAPI spec version: 0.1.0
  */
+import type { CourtDebt } from "./courtDebt";
 
 export interface CourtBooking {
   id: number;
@@ -12,6 +13,7 @@ export interface CourtBooking {
   payerId: number;
   payerName: string;
   totalAmount: number;
+  splitAmount: number;
   player1Id: number;
   player2Id: number;
   player3Id: number;
@@ -20,6 +22,7 @@ export interface CourtBooking {
   player2Name: string;
   player3Name: string;
   player4Name: string;
+  debts: CourtDebt[];
   date: string;
   createdAt: string;
 }

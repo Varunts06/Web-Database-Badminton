@@ -6,6 +6,8 @@ export const playersTable = pgTable("players", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   balance: numeric("balance", { precision: 10, scale: 2 }).notNull().default("0"),
+  betBalance: numeric("bet_balance", { precision: 10, scale: 2 }).notNull().default("0"),
+  courtBalance: numeric("court_balance", { precision: 10, scale: 2 }).notNull().default("0"),
   isFixed: boolean("is_fixed").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

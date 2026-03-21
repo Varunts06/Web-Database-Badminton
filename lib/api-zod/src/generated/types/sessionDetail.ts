@@ -10,6 +10,8 @@ import type { Match } from "./match";
 export interface SessionDetail {
   id: number;
   date: string;
+  playerIds: number[];
+  playerNames: string[];
   guestPlayerName?: string | null;
   notes?: string | null;
   createdAt: string;

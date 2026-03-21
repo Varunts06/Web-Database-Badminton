@@ -7,11 +7,11 @@ import {
   getGetPlayersQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Map, CreditCard, Receipt } from "lucide-react";
+import { Plus, Map, CreditCard, Receipt, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { Modal } from "@/components/Modal";
 import { cn, formatCurrency } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function CourtBookings() {
   const queryClient = useQueryClient();
@@ -23,6 +23,7 @@ export function CourtBookings() {
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [amount, setAmount] = useState(200);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const { mutate: createBooking, isPending } = useCreateCourtBooking({
     mutation: {
@@ -32,6 +33,8 @@ export function CourtBookings() {
         setIsModalOpen(false);
         setSelectedPlayers([]);
         setPayerId("");
+        setAmount(200);
+        setDate(new Date().toISOString().split('T')[0]);
       }
     }
   });
@@ -68,7 +71,7 @@ export function CourtBookings() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-white">Court Bookings</h1>
-          <p className="text-slate-400 mt-1">Log payments and automatically split costs.</p>
+          <p className="text-slate-400 mt-1">Log who paid and see who owes whom.</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -91,51 +94,89 @@ export function CourtBookings() {
             <p className="text-slate-400">Log who paid for the court to split debts.</p>
           </div>
         ) : (
-          bookings?.map((booking, i) => (
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-              key={booking.id} 
-              className="bg-card border border-border rounded-2xl p-5 flex flex-col md:flex-row gap-6 md:items-center justify-between shadow-md"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                  <Receipt size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white font-display mb-1">
-                    {format(new Date(booking.date), 'MMMM d, yyyy')}
-                  </h3>
-                  <div className="flex items-center gap-2 text-sm text-slate-400">
-                    <CreditCard size={14} />
-                    <span>Paid by <strong className="text-white">{booking.payerName}</strong></span>
+          bookings?.map((booking, i) => {
+            const isExpanded = expandedId === booking.id;
+            const debts = (booking as any).debts ?? [];
+            const split = (booking as any).splitAmount ?? booking.totalAmount / 4;
+
+            return (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                key={booking.id}
+                className="bg-card border border-border rounded-2xl overflow-hidden shadow-md"
+              >
+                {/* Main row */}
+                <div className="p-5 flex flex-col md:flex-row gap-4 md:items-center justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                      <Receipt size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white font-display mb-1">
+                        {format(new Date(booking.date), 'MMMM d, yyyy')}
+                      </h3>
+                      <div className="flex items-center gap-2 text-sm text-slate-400">
+                        <CreditCard size={14} />
+                        <span>Paid by <strong className="text-emerald-400">{booking.payerName}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 md:ml-auto">
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500 mb-0.5">Total Fee</p>
+                      <p className="text-2xl font-bold font-display text-white">{formatCurrency(booking.totalAmount)}</p>
+                      <p className="text-xs text-slate-500">₹{split.toFixed(0)} per player</p>
+                    </div>
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : booking.id)}
+                      className="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-all shrink-0"
+                    >
+                      {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </button>
                   </div>
                 </div>
-              </div>
-              
-              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 flex-1 max-w-sm">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Players split</p>
-                <div className="flex flex-wrap gap-2">
-                  {[booking.player1Name, booking.player2Name, booking.player3Name, booking.player4Name].map((name, idx) => (
-                    <span key={idx} className="bg-slate-800 text-slate-300 text-xs px-2.5 py-1 rounded-md border border-slate-700">
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              </div>
 
-              <div className="text-right">
-                <p className="text-sm text-slate-400 mb-1">Total Fee</p>
-                <p className="text-2xl font-bold font-display text-emerald-400">{formatCurrency(booking.totalAmount)}</p>
-              </div>
-            </motion.div>
-          ))
+                {/* Debt breakdown — expanded */}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 pb-5 border-t border-slate-800 pt-4">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Who Owes Whom</p>
+                        <div className="space-y-2">
+                          {debts.length > 0 ? debts.map((debt: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <span className="font-semibold text-red-400">{debt.fromPlayerName}</span>
+                                <ArrowRight size={16} className="text-slate-600" />
+                                <span className="font-semibold text-emerald-400">{debt.toPlayerName}</span>
+                              </div>
+                              <span className="font-bold text-white">{formatCurrency(debt.amount)}</span>
+                            </div>
+                          )) : (
+                            <p className="text-slate-500 text-sm">No debt breakdown available.</p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })
         )}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Log Court Payment">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300">Who Paid?</label>
@@ -143,16 +184,16 @@ export function CourtBookings() {
               value={payerId} 
               onChange={e => setPayerId(e.target.value)} 
               required 
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary [color-scheme:dark]"
             >
-              <option value="">Select Payer</option>
+              <option value="">Select who paid</option>
               {players?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
 
           <div className="space-y-3">
             <div className="flex justify-between items-end">
-              <label className="text-sm font-medium text-slate-300">Who Played? (Select exactly 4)</label>
+              <label className="text-sm font-medium text-slate-300">Who Played? <span className="text-slate-500">(select exactly 4)</span></label>
               <span className={cn(
                 "text-xs font-bold px-2 py-1 rounded-full",
                 selectedPlayers.length === 4 ? "bg-primary/20 text-primary" : "bg-slate-800 text-slate-400"
@@ -160,7 +201,7 @@ export function CourtBookings() {
                 {selectedPlayers.length}/4
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {players?.map(p => {
                 const isSelected = selectedPlayers.includes(p.id.toString());
                 const isDisabled = !isSelected && selectedPlayers.length >= 4;
@@ -217,13 +258,29 @@ export function CourtBookings() {
               />
             </div>
           </div>
-          
-          <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl text-emerald-400 text-sm flex items-start gap-3">
-            <CreditCard className="shrink-0 mt-0.5" size={18} />
-            <p>
-              The payer will be credited the full amount, and each of the 4 players will be debited <strong>₹{splitAmount.toFixed(2)}</strong>. (The payer's net change is +₹{(amount - splitAmount).toFixed(2)} if they played).
-            </p>
-          </div>
+
+          {/* Preview breakdown */}
+          {payerId && selectedPlayers.length === 4 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Debt Preview</p>
+              {selectedPlayers
+                .filter(id => id !== payerId)
+                .map(id => {
+                  const p = players?.find(pl => pl.id.toString() === id);
+                  const payer = players?.find(pl => pl.id.toString() === payerId);
+                  return p ? (
+                    <div key={id} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-400 font-medium">{p.name}</span>
+                        <ArrowRight size={14} className="text-slate-600" />
+                        <span className="text-emerald-400 font-medium">{payer?.name}</span>
+                      </div>
+                      <span className="font-bold text-white">₹{splitAmount.toFixed(0)}</span>
+                    </div>
+                  ) : null;
+                })}
+            </div>
+          )}
 
           <button 
             type="submit" 

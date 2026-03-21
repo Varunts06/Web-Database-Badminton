@@ -9,6 +9,8 @@
 export interface Session {
   id: number;
   date: string;
+  playerIds: number[];
+  playerNames: string[];
   guestPlayerName?: string | null;
   notes?: string | null;
   createdAt: string;

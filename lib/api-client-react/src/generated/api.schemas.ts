@@ -17,6 +17,8 @@ export interface Player {
   id: number;
   name: string;
   balance: number;
+  betBalance: number;
+  courtBalance: number;
   isFixed: boolean;
   createdAt: string;
 }
@@ -34,6 +36,8 @@ export interface UpdateBalanceRequest {
 export interface Session {
   id: number;
   date: string;
+  playerIds: number[];
+  playerNames: string[];
   guestPlayerName?: string | null;
   notes?: string | null;
   createdAt: string;
@@ -41,6 +45,7 @@ export interface Session {
 
 export interface CreateSessionRequest {
   date: string;
+  playerIds: number[];
   guestPlayerName?: string | null;
   notes?: string | null;
 }
@@ -64,6 +69,8 @@ export interface Match {
 export interface SessionDetail {
   id: number;
   date: string;
+  playerIds: number[];
+  playerNames: string[];
   guestPlayerName?: string | null;
   notes?: string | null;
   createdAt: string;
@@ -93,12 +100,19 @@ export interface Bet {
   createdAt: string;
 }
 
+export interface CourtDebt {
+  fromPlayerName: string;
+  toPlayerName: string;
+  amount: number;
+}
+
 export interface CourtBooking {
   id: number;
   sessionId?: number | null;
   payerId: number;
   payerName: string;
   totalAmount: number;
+  splitAmount: number;
   player1Id: number;
   player2Id: number;
   player3Id: number;
@@ -107,6 +121,7 @@ export interface CourtBooking {
   player2Name: string;
   player3Name: string;
   player4Name: string;
+  debts: CourtDebt[];
   date: string;
   createdAt: string;
 }

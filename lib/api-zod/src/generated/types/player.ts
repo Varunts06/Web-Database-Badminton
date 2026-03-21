@@ -10,6 +10,8 @@ export interface Player {
   id: number;
   name: string;
   balance: number;
+  betBalance: number;
+  courtBalance: number;
   isFixed: boolean;
   createdAt: string;
 }

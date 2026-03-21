@@ -1007,7 +1007,7 @@ export function useGetCourtBookings<
 }
 
 /**
- * @summary Create a court booking (200rs fee, other 3 players owe 50rs each)
+ * @summary Create a court booking
  */
 export const getCreateCourtBookingUrl = () => {
   return `/api/court-bookings`;
@@ -1071,7 +1071,7 @@ export type CreateCourtBookingMutationBody =
 export type CreateCourtBookingMutationError = ErrorType<unknown>;
 
 /**
- * @summary Create a court booking (200rs fee, other 3 players owe 50rs each)
+ * @summary Create a court booking
  */
 export const useCreateCourtBooking = <
   TError = ErrorType<unknown>,

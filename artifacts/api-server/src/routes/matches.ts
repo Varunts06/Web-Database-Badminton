@@ -55,17 +55,27 @@ router.post("/matches", async (req, res) => {
             fromPlayerId: loserId,
             toPlayerId: winnerId,
             amount: perPlayerBet.toFixed(2),
-            description: `Match bet: ${playerMap.get(loserId)?.name} owes ${playerMap.get(winnerId)?.name}`,
+            description: `Match bet: ${playerMap.get(loserId)?.name} owes ${playerMap.get(winnerId)?.name} ₹${perPlayerBet}`,
           });
+
           const loser = playerMap.get(loserId);
           if (loser) {
-            const newBalance = parseFloat(loser.balance) - perPlayerBet;
-            await db.update(playersTable).set({ balance: newBalance.toFixed(2) }).where(eq(playersTable.id, loserId));
+            const newBal = parseFloat(loser.balance) - perPlayerBet;
+            const newBetBal = parseFloat(loser.betBalance) - perPlayerBet;
+            await db.update(playersTable).set({
+              balance: newBal.toFixed(2),
+              betBalance: newBetBal.toFixed(2),
+            }).where(eq(playersTable.id, loserId));
           }
+
           const winner = playerMap.get(winnerId);
           if (winner) {
-            const newBalance = parseFloat(winner.balance) + perPlayerBet;
-            await db.update(playersTable).set({ balance: newBalance.toFixed(2) }).where(eq(playersTable.id, winnerId));
+            const newBal = parseFloat(winner.balance) + perPlayerBet;
+            const newBetBal = parseFloat(winner.betBalance) + perPlayerBet;
+            await db.update(playersTable).set({
+              balance: newBal.toFixed(2),
+              betBalance: newBetBal.toFixed(2),
+            }).where(eq(playersTable.id, winnerId));
           }
         }
       }

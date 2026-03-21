@@ -21,6 +21,8 @@ export const GetPlayersResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   balance: zod.number(),
+  betBalance: zod.number(),
+  courtBalance: zod.number(),
   isFixed: zod.boolean(),
   createdAt: zod.string(),
 });
@@ -45,6 +47,8 @@ export const GetPlayerResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   balance: zod.number(),
+  betBalance: zod.number(),
+  courtBalance: zod.number(),
   isFixed: zod.boolean(),
   createdAt: zod.string(),
 });
@@ -65,6 +69,8 @@ export const UpdatePlayerBalanceResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   balance: zod.number(),
+  betBalance: zod.number(),
+  courtBalance: zod.number(),
   isFixed: zod.boolean(),
   createdAt: zod.string(),
 });
@@ -75,6 +81,8 @@ export const UpdatePlayerBalanceResponse = zod.object({
 export const GetSessionsResponseItem = zod.object({
   id: zod.number(),
   date: zod.string(),
+  playerIds: zod.array(zod.number()),
+  playerNames: zod.array(zod.string()),
   guestPlayerName: zod.string().nullish(),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
@@ -86,6 +94,7 @@ export const GetSessionsResponse = zod.array(GetSessionsResponseItem);
  */
 export const CreateSessionBody = zod.object({
   date: zod.string(),
+  playerIds: zod.array(zod.number()),
   guestPlayerName: zod.string().nullish(),
   notes: zod.string().nullish(),
 });
@@ -100,6 +109,8 @@ export const GetSessionParams = zod.object({
 export const GetSessionResponse = zod.object({
   id: zod.number(),
   date: zod.string(),
+  playerIds: zod.array(zod.number()),
+  playerNames: zod.array(zod.string()),
   guestPlayerName: zod.string().nullish(),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
@@ -184,6 +195,7 @@ export const GetCourtBookingsResponseItem = zod.object({
   payerId: zod.number(),
   payerName: zod.string(),
   totalAmount: zod.number(),
+  splitAmount: zod.number(),
   player1Id: zod.number(),
   player2Id: zod.number(),
   player3Id: zod.number(),
@@ -192,13 +204,20 @@ export const GetCourtBookingsResponseItem = zod.object({
   player2Name: zod.string(),
   player3Name: zod.string(),
   player4Name: zod.string(),
+  debts: zod.array(
+    zod.object({
+      fromPlayerName: zod.string(),
+      toPlayerName: zod.string(),
+      amount: zod.number(),
+    }),
+  ),
   date: zod.string(),
   createdAt: zod.string(),
 });
 export const GetCourtBookingsResponse = zod.array(GetCourtBookingsResponseItem);
 
 /**
- * @summary Create a court booking (200rs fee, other 3 players owe 50rs each)
+ * @summary Create a court booking
  */
 export const CreateCourtBookingBody = zod.object({
   sessionId: zod.number().nullish(),

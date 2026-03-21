@@ -8,6 +8,7 @@
 
 export * from "./bet";
 export * from "./courtBooking";
+export * from "./courtDebt";
 export * from "./createCourtBookingRequest";
 export * from "./createMatchRequest";
 export * from "./createPlayerRequest";

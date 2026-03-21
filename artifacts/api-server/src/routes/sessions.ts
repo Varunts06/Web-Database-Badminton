@@ -4,13 +4,22 @@ import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+function formatSession(s: typeof sessionsTable.$inferSelect, playerMap: Map<number, string>) {
+  const ids: number[] = JSON.parse(s.playerIds || "[]");
+  return {
+    ...s,
+    playerIds: ids,
+    playerNames: ids.map(id => playerMap.get(id) || "Unknown"),
+    createdAt: s.createdAt.toISOString(),
+  };
+}
+
 router.get("/sessions", async (req, res) => {
   try {
     const sessions = await db.select().from(sessionsTable).orderBy(sessionsTable.id);
-    res.json(sessions.map(s => ({
-      ...s,
-      createdAt: s.createdAt.toISOString(),
-    })));
+    const players = await db.select().from(playersTable);
+    const playerMap = new Map(players.map(p => [p.id, p.name]));
+    res.json(sessions.map(s => formatSession(s, playerMap)));
   } catch (err) {
     req.log.error({ err }, "Failed to get sessions");
     res.status(500).json({ error: "Failed to get sessions" });
@@ -19,19 +28,21 @@ router.get("/sessions", async (req, res) => {
 
 router.post("/sessions", async (req, res) => {
   try {
-    const { date, guestPlayerName, notes } = req.body;
+    const { date, playerIds, guestPlayerName, notes } = req.body;
     if (!date) {
       return res.status(400).json({ error: "Date is required" });
     }
+    const ids: number[] = Array.isArray(playerIds) ? playerIds : [];
     const [session] = await db.insert(sessionsTable).values({
       date,
+      playerIds: JSON.stringify(ids),
       guestPlayerName: guestPlayerName || null,
       notes: notes || null,
     }).returning();
-    res.status(201).json({
-      ...session,
-      createdAt: session.createdAt.toISOString(),
-    });
+
+    const players = await db.select().from(playersTable);
+    const playerMap = new Map(players.map(p => [p.id, p.name]));
+    res.status(201).json(formatSession(session, playerMap));
   } catch (err) {
     req.log.error({ err }, "Failed to create session");
     res.status(500).json({ error: "Failed to create session" });
@@ -61,8 +72,7 @@ router.get("/sessions/:id", async (req, res) => {
     }));
 
     res.json({
-      ...session,
-      createdAt: session.createdAt.toISOString(),
+      ...formatSession(session, playerMap),
       matches: matchesWithNames,
     });
   } catch (err) {

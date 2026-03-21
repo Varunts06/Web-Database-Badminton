@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const sessionsTable = pgTable("sessions", {
   id: serial("id").primaryKey(),
   date: text("date").notNull(),
+  playerIds: text("player_ids").notNull().default("[]"),
   guestPlayerName: text("guest_player_name"),
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

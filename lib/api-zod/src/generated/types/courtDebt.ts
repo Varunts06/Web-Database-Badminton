@@ -6,9 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreateSessionRequest {
-  date: string;
-  playerIds: number[];
-  guestPlayerName?: string | null;
-  notes?: string | null;
+export interface CourtDebt {
+  fromPlayerName: string;
+  toPlayerName: string;
+  amount: number;
 }

@@ -4,22 +4,37 @@ import { eq, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+function buildBookingResponse(booking: typeof courtBookingsTable.$inferSelect, playerMap: Map<number, string>) {
+  const total = parseFloat(booking.totalAmount);
+  const split = total / 4;
+  const allIds = [booking.player1Id, booking.player2Id, booking.player3Id, booking.player4Id];
+  const otherIds = allIds.filter(id => id !== booking.payerId);
+  const debts = otherIds.map(id => ({
+    fromPlayerName: playerMap.get(id) || "Unknown",
+    toPlayerName: playerMap.get(booking.payerId) || "Unknown",
+    amount: split,
+  }));
+
+  return {
+    ...booking,
+    totalAmount: total,
+    splitAmount: split,
+    payerName: playerMap.get(booking.payerId) || "Unknown",
+    player1Name: playerMap.get(booking.player1Id) || "Unknown",
+    player2Name: playerMap.get(booking.player2Id) || "Unknown",
+    player3Name: playerMap.get(booking.player3Id) || "Unknown",
+    player4Name: playerMap.get(booking.player4Id) || "Unknown",
+    debts,
+    createdAt: booking.createdAt.toISOString(),
+  };
+}
+
 router.get("/court-bookings", async (req, res) => {
   try {
     const bookings = await db.select().from(courtBookingsTable).orderBy(desc(courtBookingsTable.createdAt));
     const players = await db.select().from(playersTable);
     const playerMap = new Map(players.map(p => [p.id, p.name]));
-
-    res.json(bookings.map(b => ({
-      ...b,
-      totalAmount: parseFloat(b.totalAmount),
-      payerName: playerMap.get(b.payerId) || "Unknown",
-      player1Name: playerMap.get(b.player1Id) || "Unknown",
-      player2Name: playerMap.get(b.player2Id) || "Unknown",
-      player3Name: playerMap.get(b.player3Id) || "Unknown",
-      player4Name: playerMap.get(b.player4Id) || "Unknown",
-      createdAt: b.createdAt.toISOString(),
-    })));
+    res.json(bookings.map(b => buildBookingResponse(b, playerMap)));
   } catch (err) {
     req.log.error({ err }, "Failed to get court bookings");
     res.status(500).json({ error: "Failed to get court bookings" });
@@ -52,7 +67,7 @@ router.post("/court-bookings", async (req, res) => {
     const playerMap = new Map(players.map(p => [p.id, p]));
 
     const allPlayerIds = [player1Id, player2Id, player3Id, player4Id];
-    const otherPlayerIds = allPlayerIds.filter(id => id !== payerId);
+    const otherPlayerIds = allPlayerIds.filter((id: number) => id !== payerId);
 
     for (const otherPlayerId of otherPlayerIds) {
       await db.insert(betsTable).values({
@@ -60,35 +75,34 @@ router.post("/court-bookings", async (req, res) => {
         fromPlayerId: otherPlayerId,
         toPlayerId: payerId,
         amount: perPlayer.toFixed(2),
-        description: `Court booking fee: ${playerMap.get(otherPlayerId)?.name} owes ${playerMap.get(payerId)?.name} ${perPlayer}rs`,
+        description: `Court fee: ${playerMap.get(otherPlayerId)?.name} owes ${playerMap.get(payerId)?.name} ₹${perPlayer}`,
       });
 
       const otherPlayer = playerMap.get(otherPlayerId);
       if (otherPlayer) {
-        const newBalance = parseFloat(otherPlayer.balance) - perPlayer;
-        await db.update(playersTable).set({ balance: newBalance.toFixed(2) }).where(eq(playersTable.id, otherPlayerId));
+        const newBal = parseFloat(otherPlayer.balance) - perPlayer;
+        const newCourtBal = parseFloat(otherPlayer.courtBalance) - perPlayer;
+        await db.update(playersTable).set({
+          balance: newBal.toFixed(2),
+          courtBalance: newCourtBal.toFixed(2),
+        }).where(eq(playersTable.id, otherPlayerId));
+        playerMap.set(otherPlayerId, { ...otherPlayer, balance: newBal.toFixed(2), courtBalance: newCourtBal.toFixed(2) });
       }
 
       const payer = playerMap.get(payerId);
       if (payer) {
-        const newBalance = parseFloat(payer.balance) + perPlayer;
-        await db.update(playersTable).set({ balance: newBalance.toFixed(2) }).where(eq(playersTable.id, payerId));
-        playerMap.set(payerId, { ...payer, balance: newBalance.toFixed(2) });
+        const newBal = parseFloat(payer.balance) + perPlayer;
+        const newCourtBal = parseFloat(payer.courtBalance) + perPlayer;
+        await db.update(playersTable).set({
+          balance: newBal.toFixed(2),
+          courtBalance: newCourtBal.toFixed(2),
+        }).where(eq(playersTable.id, payerId));
+        playerMap.set(payerId, { ...payer, balance: newBal.toFixed(2), courtBalance: newCourtBal.toFixed(2) });
       }
     }
 
-    const finalPayer = playerMap.get(payerId);
-
-    res.status(201).json({
-      ...booking,
-      totalAmount: parseFloat(booking.totalAmount),
-      payerName: finalPayer?.name || "Unknown",
-      player1Name: playerMap.get(player1Id)?.name || "Unknown",
-      player2Name: playerMap.get(player2Id)?.name || "Unknown",
-      player3Name: playerMap.get(player3Id)?.name || "Unknown",
-      player4Name: playerMap.get(player4Id)?.name || "Unknown",
-      createdAt: booking.createdAt.toISOString(),
-    });
+    const nameMap = new Map(players.map(p => [p.id, p.name]));
+    res.status(201).json(buildBookingResponse(booking, nameMap));
   } catch (err) {
     req.log.error({ err }, "Failed to create court booking");
     res.status(500).json({ error: "Failed to create court booking" });

@@ -234,7 +234,7 @@ paths:
     post:
       operationId: createCourtBooking
       tags: [courtBookings]
-      summary: Create a court booking (200rs fee, other 3 players owe 50rs each)
+      summary: Create a court booking
       requestBody:
         required: true
         content:
@@ -276,6 +276,10 @@ components:
           type: string
         balance:
           type: number
+        betBalance:
+          type: number
+        courtBalance:
+          type: number
         isFixed:
           type: boolean
         createdAt:
@@ -284,6 +288,8 @@ components:
         - id
         - name
         - balance
+        - betBalance
+        - courtBalance
         - isFixed
         - createdAt
 
@@ -314,6 +320,14 @@ components:
           type: integer
         date:
           type: string
+        playerIds:
+          type: array
+          items:
+            type: integer
+        playerNames:
+          type: array
+          items:
+            type: string
         guestPlayerName:
           type: string
           nullable: true
@@ -325,6 +339,8 @@ components:
       required:
         - id
         - date
+        - playerIds
+        - playerNames
         - createdAt
 
     CreateSessionRequest:
@@ -332,6 +348,10 @@ components:
       properties:
         date:
           type: string
+        playerIds:
+          type: array
+          items:
+            type: integer
         guestPlayerName:
           type: string
           nullable: true
@@ -340,6 +360,7 @@ components:
           nullable: true
       required:
         - date
+        - playerIds
 
     SessionDetail:
       type: object
@@ -348,6 +369,14 @@ components:
           type: integer
         date:
           type: string
+        playerIds:
+          type: array
+          items:
+            type: integer
+        playerNames:
+          type: array
+          items:
+            type: string
         guestPlayerName:
           type: string
           nullable: true
@@ -363,6 +392,8 @@ components:
       required:
         - id
         - date
+        - playerIds
+        - playerNames
         - createdAt
         - matches
 
@@ -485,6 +516,8 @@ components:
           type: string
         totalAmount:
           type: number
+        splitAmount:
+          type: number
         player1Id:
           type: integer
         player2Id:
@@ -501,6 +534,10 @@ components:
           type: string
         player4Name:
           type: string
+        debts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourtDebt"
         date:
           type: string
         createdAt:
@@ -510,6 +547,7 @@ components:
         - payerId
         - payerName
         - totalAmount
+        - splitAmount
         - player1Id
         - player2Id
         - player3Id
@@ -518,8 +556,23 @@ components:
         - player2Name
         - player3Name
         - player4Name
+        - debts
         - date
         - createdAt
+
+    CourtDebt:
+      type: object
+      properties:
+        fromPlayerName:
+          type: string
+        toPlayerName:
+          type: string
+        amount:
+          type: number
+      required:
+        - fromPlayerName
+        - toPlayerName
+        - amount
 
     CreateCourtBookingRequest:
       type: object
