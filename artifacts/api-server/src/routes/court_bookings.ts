@@ -109,4 +109,52 @@ router.post("/court-bookings", async (req, res) => {
   }
 });
 
+// DELETE court booking — reverses all fees
+router.delete("/court-bookings/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [booking] = await db.select().from(courtBookingsTable).where(eq(courtBookingsTable.id, id));
+    if (!booking) {
+      return res.status(404).json({ error: "Court booking not found" });
+    }
+
+    const courtBets = await db.select().from(betsTable).where(eq(betsTable.courtBookingId, id));
+    const players = await db.select().from(playersTable);
+    const playerMap = new Map(players.map(p => [p.id, p]));
+
+    for (const bet of courtBets) {
+      const betAmt = parseFloat(bet.amount);
+      // Reverse: give money back to fromPlayer (who owed), take from toPlayer (payer)
+      const fromPlayer = playerMap.get(bet.fromPlayerId);
+      if (fromPlayer) {
+        const newBal = parseFloat(fromPlayer.balance) + betAmt;
+        const newCourtBal = parseFloat(fromPlayer.courtBalance) + betAmt;
+        await db.update(playersTable).set({
+          balance: newBal.toFixed(2),
+          courtBalance: newCourtBal.toFixed(2),
+        }).where(eq(playersTable.id, bet.fromPlayerId));
+        playerMap.set(bet.fromPlayerId, { ...fromPlayer, balance: newBal.toFixed(2), courtBalance: newCourtBal.toFixed(2) });
+      }
+      const toPlayer = playerMap.get(bet.toPlayerId);
+      if (toPlayer) {
+        const newBal = parseFloat(toPlayer.balance) - betAmt;
+        const newCourtBal = parseFloat(toPlayer.courtBalance) - betAmt;
+        await db.update(playersTable).set({
+          balance: newBal.toFixed(2),
+          courtBalance: newCourtBal.toFixed(2),
+        }).where(eq(playersTable.id, bet.toPlayerId));
+        playerMap.set(bet.toPlayerId, { ...toPlayer, balance: newBal.toFixed(2), courtBalance: newCourtBal.toFixed(2) });
+      }
+    }
+
+    await db.delete(betsTable).where(eq(betsTable.courtBookingId, id));
+    await db.delete(courtBookingsTable).where(eq(courtBookingsTable.id, id));
+
+    res.json({ success: true, message: "Court booking deleted and fees reversed" });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete court booking");
+    res.status(500).json({ error: "Failed to delete court booking" });
+  }
+});
+
 export default router;

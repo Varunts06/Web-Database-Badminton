@@ -13,6 +13,11 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface SuccessResponse {
+  success: boolean;
+  message?: string;
+}
+
 export interface Player {
   id: number;
   name: string;
@@ -28,8 +33,9 @@ export interface CreatePlayerRequest {
   isFixed?: boolean;
 }
 
-export interface UpdateBalanceRequest {
-  amount: number;
+export interface UpdatePlayerRequest {
+  name?: string;
+  amount?: number;
   description?: string;
 }
 
@@ -46,6 +52,13 @@ export interface Session {
 export interface CreateSessionRequest {
   date: string;
   playerIds: number[];
+  guestPlayerName?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateSessionRequest {
+  date?: string;
+  playerIds?: number[];
   guestPlayerName?: string | null;
   notes?: string | null;
 }

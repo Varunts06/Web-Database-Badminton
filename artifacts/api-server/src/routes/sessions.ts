@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, sessionsTable, matchesTable, playersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, sessionsTable, matchesTable, playersTable, betsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -16,7 +16,7 @@ function formatSession(s: typeof sessionsTable.$inferSelect, playerMap: Map<numb
 
 router.get("/sessions", async (req, res) => {
   try {
-    const sessions = await db.select().from(sessionsTable).orderBy(sessionsTable.id);
+    const sessions = await db.select().from(sessionsTable).orderBy(desc(sessionsTable.id));
     const players = await db.select().from(playersTable);
     const playerMap = new Map(players.map(p => [p.id, p.name]));
     res.json(sessions.map(s => formatSession(s, playerMap)));
@@ -78,6 +78,92 @@ router.get("/sessions/:id", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to get session");
     res.status(500).json({ error: "Failed to get session" });
+  }
+});
+
+// PATCH session — update date, players, guest name
+router.patch("/sessions/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { date, playerIds, guestPlayerName, notes } = req.body;
+
+    const [existing] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, id));
+    if (!existing) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    const updates: Partial<typeof sessionsTable.$inferInsert> = {};
+    if (date !== undefined) updates.date = date;
+    if (playerIds !== undefined) updates.playerIds = JSON.stringify(Array.isArray(playerIds) ? playerIds : []);
+    if (guestPlayerName !== undefined) updates.guestPlayerName = guestPlayerName || null;
+    if (notes !== undefined) updates.notes = notes || null;
+
+    const [updated] = await db.update(sessionsTable)
+      .set(updates)
+      .where(eq(sessionsTable.id, id))
+      .returning();
+
+    const players = await db.select().from(playersTable);
+    const playerMap = new Map(players.map(p => [p.id, p.name]));
+    res.json(formatSession(updated, playerMap));
+  } catch (err) {
+    req.log.error({ err }, "Failed to update session");
+    res.status(500).json({ error: "Failed to update session" });
+  }
+});
+
+// DELETE session — reverses all match bets and deletes everything
+router.delete("/sessions/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, id));
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    // Get all matches in this session
+    const matches = await db.select().from(matchesTable).where(eq(matchesTable.sessionId, id));
+
+    const players = await db.select().from(playersTable);
+    const playerMap = new Map(players.map(p => [p.id, p]));
+
+    // Reverse bets for each match
+    for (const match of matches) {
+      const matchBets = await db.select().from(betsTable).where(eq(betsTable.matchId, match.id));
+      for (const bet of matchBets) {
+        const betAmt = parseFloat(bet.amount);
+        const fromPlayer = playerMap.get(bet.fromPlayerId);
+        if (fromPlayer) {
+          const newBal = parseFloat(fromPlayer.balance) + betAmt;
+          const newBetBal = parseFloat(fromPlayer.betBalance) + betAmt;
+          await db.update(playersTable).set({
+            balance: newBal.toFixed(2),
+            betBalance: newBetBal.toFixed(2),
+          }).where(eq(playersTable.id, bet.fromPlayerId));
+          playerMap.set(bet.fromPlayerId, { ...fromPlayer, balance: newBal.toFixed(2), betBalance: newBetBal.toFixed(2) });
+        }
+        const toPlayer = playerMap.get(bet.toPlayerId);
+        if (toPlayer) {
+          const newBal = parseFloat(toPlayer.balance) - betAmt;
+          const newBetBal = parseFloat(toPlayer.betBalance) - betAmt;
+          await db.update(playersTable).set({
+            balance: newBal.toFixed(2),
+            betBalance: newBetBal.toFixed(2),
+          }).where(eq(playersTable.id, bet.toPlayerId));
+          playerMap.set(bet.toPlayerId, { ...toPlayer, balance: newBal.toFixed(2), betBalance: newBetBal.toFixed(2) });
+        }
+      }
+      await db.delete(betsTable).where(eq(betsTable.matchId, match.id));
+    }
+
+    // Delete all matches, then session
+    await db.delete(matchesTable).where(eq(matchesTable.sessionId, id));
+    await db.delete(sessionsTable).where(eq(sessionsTable.id, id));
+
+    res.json({ success: true, message: "Session and all matches deleted" });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete session");
+    res.status(500).json({ error: "Failed to delete session" });
   }
 });
 

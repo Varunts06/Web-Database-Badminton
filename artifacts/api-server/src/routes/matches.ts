@@ -125,4 +125,57 @@ router.get("/matches/:id", async (req, res) => {
   }
 });
 
+// DELETE match — reverses all bets associated with it
+router.delete("/matches/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [match] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
+    if (!match) {
+      return res.status(404).json({ error: "Match not found" });
+    }
+
+    // Find all bets for this match
+    const matchBets = await db.select().from(betsTable).where(eq(betsTable.matchId, id));
+
+    // Reverse each bet: add back to loser, remove from winner
+    const players = await db.select().from(playersTable);
+    const playerMap = new Map(players.map(p => [p.id, p]));
+
+    for (const bet of matchBets) {
+      const betAmt = parseFloat(bet.amount);
+      // fromPlayer is the loser (paid): give money back
+      const fromPlayer = playerMap.get(bet.fromPlayerId);
+      if (fromPlayer) {
+        const newBal = parseFloat(fromPlayer.balance) + betAmt;
+        const newBetBal = parseFloat(fromPlayer.betBalance) + betAmt;
+        await db.update(playersTable).set({
+          balance: newBal.toFixed(2),
+          betBalance: newBetBal.toFixed(2),
+        }).where(eq(playersTable.id, bet.fromPlayerId));
+        playerMap.set(bet.fromPlayerId, { ...fromPlayer, balance: newBal.toFixed(2), betBalance: newBetBal.toFixed(2) });
+      }
+      // toPlayer is the winner (received): take money back
+      const toPlayer = playerMap.get(bet.toPlayerId);
+      if (toPlayer) {
+        const newBal = parseFloat(toPlayer.balance) - betAmt;
+        const newBetBal = parseFloat(toPlayer.betBalance) - betAmt;
+        await db.update(playersTable).set({
+          balance: newBal.toFixed(2),
+          betBalance: newBetBal.toFixed(2),
+        }).where(eq(playersTable.id, bet.toPlayerId));
+        playerMap.set(bet.toPlayerId, { ...toPlayer, balance: newBal.toFixed(2), betBalance: newBetBal.toFixed(2) });
+      }
+    }
+
+    // Delete bets then match
+    await db.delete(betsTable).where(eq(betsTable.matchId, id));
+    await db.delete(matchesTable).where(eq(matchesTable.id, id));
+
+    res.json({ success: true, message: "Match deleted and bets reversed" });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete match");
+    res.status(500).json({ error: "Failed to delete match" });
+  }
+});
+
 export default router;

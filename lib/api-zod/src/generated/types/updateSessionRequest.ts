@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface UpdateBalanceRequest {
-  amount: number;
-  description?: string;
+export interface UpdateSessionRequest {
+  date?: string;
+  playerIds?: number[];
+  guestPlayerName?: string | null;
+  notes?: string | null;
 }

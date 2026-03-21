@@ -54,18 +54,19 @@ export const GetPlayerResponse = zod.object({
 });
 
 /**
- * @summary Update player balance
+ * @summary Update player name or balance
  */
-export const UpdatePlayerBalanceParams = zod.object({
+export const UpdatePlayerParams = zod.object({
   id: zod.coerce.number(),
 });
 
-export const UpdatePlayerBalanceBody = zod.object({
-  amount: zod.number(),
+export const UpdatePlayerBody = zod.object({
+  name: zod.string().optional(),
+  amount: zod.number().optional(),
   description: zod.string().optional(),
 });
 
-export const UpdatePlayerBalanceResponse = zod.object({
+export const UpdatePlayerResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   balance: zod.number(),
@@ -73,6 +74,18 @@ export const UpdatePlayerBalanceResponse = zod.object({
   courtBalance: zod.number(),
   isFixed: zod.boolean(),
   createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a player
+ */
+export const DeletePlayerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeletePlayerResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
 });
 
 /**
@@ -134,6 +147,42 @@ export const GetSessionResponse = zod.object({
 });
 
 /**
+ * @summary Update session details
+ */
+export const UpdateSessionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateSessionBody = zod.object({
+  date: zod.string().optional(),
+  playerIds: zod.array(zod.number()).optional(),
+  guestPlayerName: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const UpdateSessionResponse = zod.object({
+  id: zod.number(),
+  date: zod.string(),
+  playerIds: zod.array(zod.number()),
+  playerNames: zod.array(zod.string()),
+  guestPlayerName: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a session and all its matches (reverses bets)
+ */
+export const DeleteSessionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteSessionResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary Create a new match within a session
  */
 export const CreateMatchBody = zod.object({
@@ -167,6 +216,18 @@ export const GetMatchResponse = zod.object({
   winnerTeam: zod.number().nullish(),
   betAmount: zod.number(),
   createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a match and reverse its bets
+ */
+export const DeleteMatchParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteMatchResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
 });
 
 /**
@@ -228,4 +289,16 @@ export const CreateCourtBookingBody = zod.object({
   player4Id: zod.number(),
   totalAmount: zod.number(),
   date: zod.string(),
+});
+
+/**
+ * @summary Delete a court booking and reverse fees
+ */
+export const DeleteCourtBookingParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteCourtBookingResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
 });

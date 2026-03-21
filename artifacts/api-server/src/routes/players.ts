@@ -58,44 +58,74 @@ router.get("/players/:id", async (req, res) => {
   }
 });
 
+// PATCH: update player name OR adjust balance
 router.patch("/players/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { amount, description } = req.body;
-    if (amount === undefined) {
-      return res.status(400).json({ error: "Amount is required" });
-    }
+    const { name, amount, description } = req.body;
 
     const [player] = await db.select().from(playersTable).where(eq(playersTable.id, id));
     if (!player) {
       return res.status(404).json({ error: "Player not found" });
     }
 
-    const delta = parseFloat(amount);
-    const newBalance = parseFloat(player.balance) + delta;
-    const newBetBalance = parseFloat(player.betBalance) + delta;
+    const updates: Partial<typeof playersTable.$inferInsert> = {};
+
+    // Update name if provided
+    if (name !== undefined && name.trim()) {
+      updates.name = name.trim();
+    }
+
+    // Update balance if amount provided
+    if (amount !== undefined) {
+      const delta = parseFloat(amount);
+      const newBalance = parseFloat(player.balance) + delta;
+      const newBetBalance = parseFloat(player.betBalance) + delta;
+      updates.balance = newBalance.toFixed(2);
+      updates.betBalance = newBetBalance.toFixed(2);
+
+      if (description) {
+        await db.insert(betsTable).values({
+          fromPlayerId: id,
+          toPlayerId: id,
+          amount: Math.abs(delta).toFixed(2),
+          description: description || `Manual adjustment: ${delta > 0 ? '+' : ''}${delta}rs`,
+        });
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
 
     const [updated] = await db.update(playersTable)
-      .set({
-        balance: newBalance.toFixed(2),
-        betBalance: newBetBalance.toFixed(2),
-      })
+      .set(updates)
       .where(eq(playersTable.id, id))
       .returning();
 
-    if (description) {
-      await db.insert(betsTable).values({
-        fromPlayerId: id,
-        toPlayerId: id,
-        amount: Math.abs(delta).toFixed(2),
-        description: description || `Manual adjustment: ${delta > 0 ? '+' : ''}${delta}rs`,
-      });
-    }
-
     res.json(formatPlayer(updated));
   } catch (err) {
-    req.log.error({ err }, "Failed to update balance");
-    res.status(500).json({ error: "Failed to update balance" });
+    req.log.error({ err }, "Failed to update player");
+    res.status(500).json({ error: "Failed to update player" });
+  }
+});
+
+// DELETE player (only guest players, or allow any)
+router.delete("/players/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [player] = await db.select().from(playersTable).where(eq(playersTable.id, id));
+    if (!player) {
+      return res.status(404).json({ error: "Player not found" });
+    }
+    if (player.isFixed) {
+      return res.status(400).json({ error: "Cannot delete a fixed player" });
+    }
+    await db.delete(playersTable).where(eq(playersTable.id, id));
+    res.json({ success: true, message: "Player deleted" });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete player");
+    res.status(500).json({ error: "Failed to delete player" });
   }
 });
 

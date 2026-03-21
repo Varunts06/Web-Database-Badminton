@@ -8,17 +8,11 @@ servers:
     description: Base API path
 tags:
   - name: health
-    description: Health operations
   - name: players
-    description: Player management
   - name: sessions
-    description: Game session management
   - name: matches
-    description: Match management
   - name: bets
-    description: Bet tracking
   - name: courtBookings
-    description: Court booking management
 paths:
   /healthz:
     get:
@@ -84,15 +78,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/Player"
         "404":
-          description: Player not found
+          description: Not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     patch:
-      operationId: updatePlayerBalance
+      operationId: updatePlayer
       tags: [players]
-      summary: Update player balance
+      summary: Update player name or balance
       parameters:
         - name: id
           in: path
@@ -104,14 +98,31 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateBalanceRequest"
+              $ref: "#/components/schemas/UpdatePlayerRequest"
       responses:
         "200":
-          description: Balance updated
+          description: Player updated
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Player"
+    delete:
+      operationId: deletePlayer
+      tags: [players]
+      summary: Delete a player
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
   /sessions:
     get:
@@ -163,6 +174,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SessionDetail"
+    patch:
+      operationId: updateSession
+      tags: [sessions]
+      summary: Update session details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSessionRequest"
+      responses:
+        "200":
+          description: Session updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+    delete:
+      operationId: deleteSession
+      tags: [sessions]
+      summary: Delete a session and all its matches (reverses bets)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
   /matches:
     post:
@@ -201,6 +252,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Match"
+    delete:
+      operationId: deleteMatch
+      tags: [matches]
+      summary: Delete a match and reverse its bets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted and bets reversed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
   /bets:
     get:
@@ -243,11 +311,30 @@ paths:
               $ref: "#/components/schemas/CreateCourtBookingRequest"
       responses:
         "201":
-          description: Court booking created and debts settled
+          description: Court booking created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CourtBooking"
+
+  /court-bookings/{id}:
+    delete:
+      operationId: deleteCourtBooking
+      tags: [courtBookings]
+      summary: Delete a court booking and reverse fees
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted and fees reversed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
 components:
   schemas:
@@ -266,6 +353,16 @@ components:
           type: string
       required:
         - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
 
     Player:
       type: object
@@ -303,15 +400,15 @@ components:
       required:
         - name
 
-    UpdateBalanceRequest:
+    UpdatePlayerRequest:
       type: object
       properties:
+        name:
+          type: string
         amount:
           type: number
         description:
           type: string
-      required:
-        - amount
 
     Session:
       type: object
@@ -361,6 +458,22 @@ components:
       required:
         - date
         - playerIds
+
+    UpdateSessionRequest:
+      type: object
+      properties:
+        date:
+          type: string
+        playerIds:
+          type: array
+          items:
+            type: integer
+        guestPlayerName:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
 
     SessionDetail:
       type: object

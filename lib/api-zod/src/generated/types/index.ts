@@ -19,4 +19,6 @@ export * from "./match";
 export * from "./player";
 export * from "./session";
 export * from "./sessionDetail";
-export * from "./updateBalanceRequest";
+export * from "./successResponse";
+export * from "./updatePlayerRequest";
+export * from "./updateSessionRequest";
