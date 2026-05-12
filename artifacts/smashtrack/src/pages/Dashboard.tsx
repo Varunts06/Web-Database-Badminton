@@ -3,7 +3,6 @@ import {
   useGetPlayers, 
   useCreatePlayer, 
   useUpdatePlayer, 
-  useUpdatePlayerBalance,
   useDeletePlayer,
   getGetPlayersQueryKey 
 } from "@workspace/api-client-react";
@@ -33,7 +32,7 @@ export function Dashboard() {
     mutation: { onSuccess: () => { invalidatePlayers(); setIsEditPlayerModalOpen(false); setSelectedPlayerId(null); } }
   });
 
-  const { mutate: updateBalance, isPending: isUpdatingBalance } = useUpdatePlayerBalance({
+  const { mutate: updateBalance, isPending: isUpdatingBalance } = useUpdatePlayer({
     mutation: { onSuccess: () => { invalidatePlayers(); setIsTopUpModalOpen(false); setSelectedPlayerId(null); } }
   });
 
@@ -51,7 +50,7 @@ export function Dashboard() {
     e.preventDefault();
     if (!selectedPlayerId) return;
     const formData = new FormData(e.currentTarget);
-    updateBalance({ id: selectedPlayerId, data: { amount: Number(formData.get("amount")), description: formData.get("description") as string || "Manual Top Up" } });
+    updateBalance({ id: selectedPlayerId, data: { amount: Number(formData.get("amount")), description: formData.get("description") as string || "Manual Top Up", name: undefined } });
   };
 
   const handleEditPlayer = (e: React.FormEvent<HTMLFormElement>) => {
