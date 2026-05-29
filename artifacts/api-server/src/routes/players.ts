@@ -14,22 +14,21 @@ function formatPlayer(p: typeof playersTable.$inferSelect) {
   };
 }
 
-router.get("/players", async (req: Request, res: Response): Promise<void> => {
+router.get("/players", async (req: Request, res: Response) => {
   try {
     const players = await db.select().from(playersTable).orderBy(playersTable.id);
-    res.json(players.map(formatPlayer));
+    return res.json(players.map(formatPlayer));
   } catch (err) {
     req.log.error({ err }, "Failed to get players");
-    res.status(500).json({ error: "Failed to get players" });
+    return res.status(500).json({ error: "Failed to get players" });
   }
 });
 
-router.post("/players", async (req: Request, res: Response): Promise<void> => {
+router.post("/players", async (req: Request, res: Response) => {
   try {
     const { name, isFixed } = req.body;
     if (!name) {
-      res.status(400).json({ error: "Name is required" });
-      return;
+      return res.status(400).json({ error: "Name is required" });
     }
     const [player] = await db.insert(playersTable).values({
       name,
@@ -38,37 +37,35 @@ router.post("/players", async (req: Request, res: Response): Promise<void> => {
       betBalance: "0",
       courtBalance: "0",
     }).returning();
-    res.status(201).json(formatPlayer(player));
+    return res.status(201).json(formatPlayer(player));
   } catch (err) {
     req.log.error({ err }, "Failed to create player");
-    res.status(500).json({ error: "Failed to create player" });
+    return res.status(500).json({ error: "Failed to create player" });
   }
 });
 
-router.get("/players/:id", async (req: Request, res: Response): Promise<void> => {
+router.get("/players/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const [player] = await db.select().from(playersTable).where(eq(playersTable.id, id));
     if (!player) {
-      res.status(404).json({ error: "Player not found" });
-      return;
+      return res.status(404).json({ error: "Player not found" });
     }
-    res.json(formatPlayer(player));
+    return res.json(formatPlayer(player));
   } catch (err) {
     req.log.error({ err }, "Failed to get player");
-    res.status(500).json({ error: "Failed to get player" });
+    return res.status(500).json({ error: "Failed to get player" });
   }
 });
 
-router.patch("/players/:id", async (req: Request, res: Response): Promise<void> => {
+router.patch("/players/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const { name, amount, description } = req.body;
 
     const [player] = await db.select().from(playersTable).where(eq(playersTable.id, id));
     if (!player) {
-      res.status(404).json({ error: "Player not found" });
-      return;
+      return res.status(404).json({ error: "Player not found" });
     }
 
     const updates: Partial<typeof playersTable.$inferInsert> = {};
@@ -95,8 +92,7 @@ router.patch("/players/:id", async (req: Request, res: Response): Promise<void> 
     }
 
     if (Object.keys(updates).length === 0) {
-      res.status(400).json({ error: "No valid fields to update" });
-      return;
+      return res.status(400).json({ error: "No valid fields to update" });
     }
 
     const [updated] = await db.update(playersTable)
@@ -104,30 +100,28 @@ router.patch("/players/:id", async (req: Request, res: Response): Promise<void> 
       .where(eq(playersTable.id, id))
       .returning();
 
-    res.json(formatPlayer(updated));
+    return res.json(formatPlayer(updated));
   } catch (err) {
     req.log.error({ err }, "Failed to update player");
-    res.status(500).json({ error: "Failed to update player" });
+    return res.status(500).json({ error: "Failed to update player" });
   }
 });
 
-router.delete("/players/:id", async (req: Request, res: Response): Promise<void> => {
+router.delete("/players/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const [player] = await db.select().from(playersTable).where(eq(playersTable.id, id));
     if (!player) {
-      res.status(404).json({ error: "Player not found" });
-      return;
+      return res.status(404).json({ error: "Player not found" });
     }
     if (player.isFixed) {
-      res.status(400).json({ error: "Cannot delete a fixed player" });
-      return;
+      return res.status(400).json({ error: "Cannot delete a fixed player" });
     }
     await db.delete(playersTable).where(eq(playersTable.id, id));
-    res.json({ success: true, message: "Player deleted" });
+    return res.json({ success: true, message: "Player deleted" });
   } catch (err) {
     req.log.error({ err }, "Failed to delete player");
-    res.status(500).json({ error: "Failed to delete player" });
+    return res.status(500).json({ error: "Failed to delete player" });
   }
 });
 

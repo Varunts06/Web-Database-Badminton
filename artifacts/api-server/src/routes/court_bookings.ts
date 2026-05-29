@@ -29,25 +29,24 @@ function buildBookingResponse(booking: typeof courtBookingsTable.$inferSelect, p
   };
 }
 
-router.get("/court-bookings", async (req: Request, res: Response): Promise<void> => {
+router.get("/court-bookings", async (req: Request, res: Response) => {
   try {
     const bookings = await db.select().from(courtBookingsTable).orderBy(desc(courtBookingsTable.createdAt));
     const players = await db.select().from(playersTable);
     const playerMap = new Map(players.map(p => [p.id, p.name]));
-    res.json(bookings.map(b => buildBookingResponse(b, playerMap)));
+    return res.json(bookings.map(b => buildBookingResponse(b, playerMap)));
   } catch (err) {
     req.log.error({ err }, "Failed to get court bookings");
-    res.status(500).json({ error: "Failed to get court bookings" });
+    return res.status(500).json({ error: "Failed to get court bookings" });
   }
 });
 
-router.post("/court-bookings", async (req: Request, res: Response): Promise<void> => {
+router.post("/court-bookings", async (req: Request, res: Response) => {
   try {
     const { sessionId, payerId, player1Id, player2Id, player3Id, player4Id, totalAmount, date } = req.body;
 
     if (!payerId || !player1Id || !player2Id || !player3Id || !player4Id || !totalAmount || !date) {
-      res.status(400).json({ error: "Missing required fields" });
-      return;
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     const total = parseFloat(totalAmount);
@@ -103,20 +102,19 @@ router.post("/court-bookings", async (req: Request, res: Response): Promise<void
     }
 
     const nameMap = new Map(players.map(p => [p.id, p.name]));
-    res.status(201).json(buildBookingResponse(booking, nameMap));
+    return res.status(201).json(buildBookingResponse(booking, nameMap));
   } catch (err) {
     req.log.error({ err }, "Failed to create court booking");
-    res.status(500).json({ error: "Failed to create court booking" });
+    return res.status(500).json({ error: "Failed to create court booking" });
   }
 });
 
-router.delete("/court-bookings/:id", async (req: Request, res: Response): Promise<void> => {
+router.delete("/court-bookings/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const [booking] = await db.select().from(courtBookingsTable).where(eq(courtBookingsTable.id, id));
     if (!booking) {
-      res.status(404).json({ error: "Court booking not found" });
-      return;
+      return res.status(404).json({ error: "Court booking not found" });
     }
 
     const courtBets = await db.select().from(betsTable).where(eq(betsTable.courtBookingId, id));
@@ -152,10 +150,10 @@ router.delete("/court-bookings/:id", async (req: Request, res: Response): Promis
     await db.delete(betsTable).where(eq(betsTable.courtBookingId, id));
     await db.delete(courtBookingsTable).where(eq(courtBookingsTable.id, id));
 
-    res.json({ success: true, message: "Court booking deleted and fees reversed" });
+    return res.json({ success: true, message: "Court booking deleted and fees reversed" });
   } catch (err) {
     req.log.error({ err }, "Failed to delete court booking");
-    res.status(500).json({ error: "Failed to delete court booking" });
+    return res.status(500).json({ error: "Failed to delete court booking" });
   }
 });
 

@@ -14,24 +14,23 @@ function formatSession(s: typeof sessionsTable.$inferSelect, playerMap: Map<numb
   };
 }
 
-router.get("/sessions", async (req: Request, res: Response): Promise<void> => {
+router.get("/sessions", async (req: Request, res: Response) => {
   try {
     const sessions = await db.select().from(sessionsTable).orderBy(desc(sessionsTable.id));
     const players = await db.select().from(playersTable);
     const playerMap = new Map(players.map(p => [p.id, p.name]));
-    res.json(sessions.map(s => formatSession(s, playerMap)));
+    return res.json(sessions.map(s => formatSession(s, playerMap)));
   } catch (err) {
     req.log.error({ err }, "Failed to get sessions");
-    res.status(500).json({ error: "Failed to get sessions" });
+    return res.status(500).json({ error: "Failed to get sessions" });
   }
 });
 
-router.post("/sessions", async (req: Request, res: Response): Promise<void> => {
+router.post("/sessions", async (req: Request, res: Response) => {
   try {
     const { date, playerIds, guestPlayerName, notes } = req.body;
     if (!date) {
-      res.status(400).json({ error: "Date is required" });
-      return;
+      return res.status(400).json({ error: "Date is required" });
     }
     const ids: number[] = Array.isArray(playerIds) ? playerIds : [];
     const [session] = await db.insert(sessionsTable).values({
@@ -43,20 +42,19 @@ router.post("/sessions", async (req: Request, res: Response): Promise<void> => {
 
     const players = await db.select().from(playersTable);
     const playerMap = new Map(players.map(p => [p.id, p.name]));
-    res.status(201).json(formatSession(session, playerMap));
+    return res.status(201).json(formatSession(session, playerMap));
   } catch (err) {
     req.log.error({ err }, "Failed to create session");
-    res.status(500).json({ error: "Failed to create session" });
+    return res.status(500).json({ error: "Failed to create session" });
   }
 });
 
-router.get("/sessions/:id", async (req: Request, res: Response): Promise<void> => {
+router.get("/sessions/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, id));
     if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
+      return res.status(404).json({ error: "Session not found" });
     }
 
     const matches = await db.select().from(matchesTable).where(eq(matchesTable.sessionId, id));
@@ -73,25 +71,24 @@ router.get("/sessions/:id", async (req: Request, res: Response): Promise<void> =
       createdAt: m.createdAt.toISOString(),
     }));
 
-    res.json({
+    return res.json({
       ...formatSession(session, playerMap),
       matches: matchesWithNames,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get session");
-    res.status(500).json({ error: "Failed to get session" });
+    return res.status(500).json({ error: "Failed to get session" });
   }
 });
 
-router.patch("/sessions/:id", async (req: Request, res: Response): Promise<void> => {
+router.patch("/sessions/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const { date, playerIds, guestPlayerName, notes } = req.body;
 
     const [existing] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, id));
     if (!existing) {
-      res.status(404).json({ error: "Session not found" });
-      return;
+      return res.status(404).json({ error: "Session not found" });
     }
 
     const updates: Partial<typeof sessionsTable.$inferInsert> = {};
@@ -107,20 +104,19 @@ router.patch("/sessions/:id", async (req: Request, res: Response): Promise<void>
 
     const players = await db.select().from(playersTable);
     const playerMap = new Map(players.map(p => [p.id, p.name]));
-    res.json(formatSession(updated, playerMap));
+    return res.json(formatSession(updated, playerMap));
   } catch (err) {
     req.log.error({ err }, "Failed to update session");
-    res.status(500).json({ error: "Failed to update session" });
+    return res.status(500).json({ error: "Failed to update session" });
   }
 });
 
-router.delete("/sessions/:id", async (req: Request, res: Response): Promise<void> => {
+router.delete("/sessions/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const [session] = await db.select().from(sessionsTable).where(eq(sessionsTable.id, id));
     if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
+      return res.status(404).json({ error: "Session not found" });
     }
 
     const matches = await db.select().from(matchesTable).where(eq(matchesTable.sessionId, id));
@@ -160,10 +156,10 @@ router.delete("/sessions/:id", async (req: Request, res: Response): Promise<void
     await db.delete(matchesTable).where(eq(matchesTable.sessionId, id));
     await db.delete(sessionsTable).where(eq(sessionsTable.id, id));
 
-    res.json({ success: true, message: "Session and all matches deleted" });
+    return res.json({ success: true, message: "Session and all matches deleted" });
   } catch (err) {
     req.log.error({ err }, "Failed to delete session");
-    res.status(500).json({ error: "Failed to delete session" });
+    return res.status(500).json({ error: "Failed to delete session" });
   }
 });
 

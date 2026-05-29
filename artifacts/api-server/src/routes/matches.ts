@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-router.post("/matches", async (req: Request, res: Response): Promise<void> => {
+router.post("/matches", async (req: Request, res: Response) => {
   try {
     const {
       sessionId,
@@ -17,8 +17,7 @@ router.post("/matches", async (req: Request, res: Response): Promise<void> => {
     } = req.body;
 
     if (!sessionId || !team1Player1Id || !team1Player2Id || !team2Player1Id || !team2Player2Id) {
-      res.status(400).json({ error: "Missing required fields" });
-      return;
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     const amount = parseFloat(betAmount || "20");
@@ -87,7 +86,7 @@ router.post("/matches", async (req: Request, res: Response): Promise<void> => {
     const t2p1 = playerMap.get(team2Player1Id);
     const t2p2 = playerMap.get(team2Player2Id);
 
-    res.status(201).json({
+    return res.status(201).json({
       ...match,
       betAmount: parseFloat(match.betAmount),
       team1Player1Name: t1p1?.name ?? "Unknown",
@@ -98,21 +97,20 @@ router.post("/matches", async (req: Request, res: Response): Promise<void> => {
     });
   } catch (err) {
     req.log.error({ err }, "Failed to create match");
-    res.status(500).json({ error: "Failed to create match" });
+    return res.status(500).json({ error: "Failed to create match" });
   }
 });
 
-router.get("/matches/:id", async (req: Request, res: Response): Promise<void> => {
+router.get("/matches/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const [match] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
     if (!match) {
-      res.status(404).json({ error: "Match not found" });
-      return;
+      return res.status(404).json({ error: "Match not found" });
     }
     const players = await db.select().from(playersTable);
     const playerMap = new Map(players.map(p => [p.id, p.name]));
-    res.json({
+    return res.json({
       ...match,
       betAmount: parseFloat(match.betAmount),
       team1Player1Name: playerMap.get(match.team1Player1Id) ?? "Unknown",
@@ -123,17 +121,16 @@ router.get("/matches/:id", async (req: Request, res: Response): Promise<void> =>
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get match");
-    res.status(500).json({ error: "Failed to get match" });
+    return res.status(500).json({ error: "Failed to get match" });
   }
 });
 
-router.delete("/matches/:id", async (req: Request, res: Response): Promise<void> => {
+router.delete("/matches/:id", async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const [match] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
     if (!match) {
-      res.status(404).json({ error: "Match not found" });
-      return;
+      return res.status(404).json({ error: "Match not found" });
     }
 
     const matchBets = await db.select().from(betsTable).where(eq(betsTable.matchId, id));
@@ -169,10 +166,10 @@ router.delete("/matches/:id", async (req: Request, res: Response): Promise<void>
     await db.delete(betsTable).where(eq(betsTable.matchId, id));
     await db.delete(matchesTable).where(eq(matchesTable.id, id));
 
-    res.json({ success: true, message: "Match deleted and bets reversed" });
+    return res.json({ success: true, message: "Match deleted and bets reversed" });
   } catch (err) {
     req.log.error({ err }, "Failed to delete match");
-    res.status(500).json({ error: "Failed to delete match" });
+    return res.status(500).json({ error: "Failed to delete match" });
   }
 });
 
