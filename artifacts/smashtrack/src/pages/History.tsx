@@ -2,7 +2,7 @@ import React from "react";
 import { useGetBets } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { formatCurrency, cn } from "@/lib/utils";
-import { ArrowRight, Trophy, Map, Wallet, CalendarDays } from "lucide-react";
+import { ArrowRight, Trophy, Map, Wallet, CalendarDays, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function History() {
@@ -30,7 +30,7 @@ export function History() {
           ))
         ) : Object.keys(groupedBets).length === 0 ? (
           <div className="py-16 text-center border-2 border-dashed border-slate-800 rounded-2xl">
-            <History className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <Clock className="w-12 h-12 text-slate-600 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">No transactions yet</h3>
             <p className="text-slate-400">Play matches or log court fees to see history here.</p>
           </div>

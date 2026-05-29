@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { db, playersTable, betsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -14,7 +14,7 @@ function formatPlayer(p: typeof playersTable.$inferSelect) {
   };
 }
 
-router.get("/players", async (req, res) => {
+router.get("/players", async (req: Request, res: Response): Promise<void> => {
   try {
     const players = await db.select().from(playersTable).orderBy(playersTable.id);
     res.json(players.map(formatPlayer));
@@ -24,11 +24,12 @@ router.get("/players", async (req, res) => {
   }
 });
 
-router.post("/players", async (req, res) => {
+router.post("/players", async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, isFixed } = req.body;
     if (!name) {
-      return res.status(400).json({ error: "Name is required" });
+      res.status(400).json({ error: "Name is required" });
+      return;
     }
     const [player] = await db.insert(playersTable).values({
       name,
@@ -44,12 +45,13 @@ router.post("/players", async (req, res) => {
   }
 });
 
-router.get("/players/:id", async (req, res) => {
+router.get("/players/:id", async (req: Request, res: Response): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const [player] = await db.select().from(playersTable).where(eq(playersTable.id, id));
     if (!player) {
-      return res.status(404).json({ error: "Player not found" });
+      res.status(404).json({ error: "Player not found" });
+      return;
     }
     res.json(formatPlayer(player));
   } catch (err) {
@@ -58,25 +60,23 @@ router.get("/players/:id", async (req, res) => {
   }
 });
 
-// PATCH: update player name OR adjust balance
-router.patch("/players/:id", async (req, res) => {
+router.patch("/players/:id", async (req: Request, res: Response): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const { name, amount, description } = req.body;
 
     const [player] = await db.select().from(playersTable).where(eq(playersTable.id, id));
     if (!player) {
-      return res.status(404).json({ error: "Player not found" });
+      res.status(404).json({ error: "Player not found" });
+      return;
     }
 
     const updates: Partial<typeof playersTable.$inferInsert> = {};
 
-    // Update name if provided
     if (name !== undefined && name.trim()) {
       updates.name = name.trim();
     }
 
-    // Update balance if amount provided
     if (amount !== undefined) {
       const delta = parseFloat(amount);
       const newBalance = parseFloat(player.balance) + delta;
@@ -89,13 +89,14 @@ router.patch("/players/:id", async (req, res) => {
           fromPlayerId: id,
           toPlayerId: id,
           amount: Math.abs(delta).toFixed(2),
-          description: description || `Manual adjustment: ${delta > 0 ? '+' : ''}${delta}rs`,
+          description: description || `Manual adjustment: ${delta > 0 ? "+" : ""}${delta}rs`,
         });
       }
     }
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: "No valid fields to update" });
+      res.status(400).json({ error: "No valid fields to update" });
+      return;
     }
 
     const [updated] = await db.update(playersTable)
@@ -110,16 +111,17 @@ router.patch("/players/:id", async (req, res) => {
   }
 });
 
-// DELETE player (only guest players, or allow any)
-router.delete("/players/:id", async (req, res) => {
+router.delete("/players/:id", async (req: Request, res: Response): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const [player] = await db.select().from(playersTable).where(eq(playersTable.id, id));
     if (!player) {
-      return res.status(404).json({ error: "Player not found" });
+      res.status(404).json({ error: "Player not found" });
+      return;
     }
     if (player.isFixed) {
-      return res.status(400).json({ error: "Cannot delete a fixed player" });
+      res.status(400).json({ error: "Cannot delete a fixed player" });
+      return;
     }
     await db.delete(playersTable).where(eq(playersTable.id, id));
     res.json({ success: true, message: "Player deleted" });

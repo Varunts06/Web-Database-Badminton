@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { db, courtBookingsTable, playersTable, betsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
@@ -10,8 +10,8 @@ function buildBookingResponse(booking: typeof courtBookingsTable.$inferSelect, p
   const allIds = [booking.player1Id, booking.player2Id, booking.player3Id, booking.player4Id];
   const otherIds = allIds.filter(id => id !== booking.payerId);
   const debts = otherIds.map(id => ({
-    fromPlayerName: playerMap.get(id) || "Unknown",
-    toPlayerName: playerMap.get(booking.payerId) || "Unknown",
+    fromPlayerName: playerMap.get(id) ?? "Unknown",
+    toPlayerName: playerMap.get(booking.payerId) ?? "Unknown",
     amount: split,
   }));
 
@@ -19,17 +19,17 @@ function buildBookingResponse(booking: typeof courtBookingsTable.$inferSelect, p
     ...booking,
     totalAmount: total,
     splitAmount: split,
-    payerName: playerMap.get(booking.payerId) || "Unknown",
-    player1Name: playerMap.get(booking.player1Id) || "Unknown",
-    player2Name: playerMap.get(booking.player2Id) || "Unknown",
-    player3Name: playerMap.get(booking.player3Id) || "Unknown",
-    player4Name: playerMap.get(booking.player4Id) || "Unknown",
+    payerName: playerMap.get(booking.payerId) ?? "Unknown",
+    player1Name: playerMap.get(booking.player1Id) ?? "Unknown",
+    player2Name: playerMap.get(booking.player2Id) ?? "Unknown",
+    player3Name: playerMap.get(booking.player3Id) ?? "Unknown",
+    player4Name: playerMap.get(booking.player4Id) ?? "Unknown",
     debts,
     createdAt: booking.createdAt.toISOString(),
   };
 }
 
-router.get("/court-bookings", async (req, res) => {
+router.get("/court-bookings", async (req: Request, res: Response): Promise<void> => {
   try {
     const bookings = await db.select().from(courtBookingsTable).orderBy(desc(courtBookingsTable.createdAt));
     const players = await db.select().from(playersTable);
@@ -41,12 +41,13 @@ router.get("/court-bookings", async (req, res) => {
   }
 });
 
-router.post("/court-bookings", async (req, res) => {
+router.post("/court-bookings", async (req: Request, res: Response): Promise<void> => {
   try {
     const { sessionId, payerId, player1Id, player2Id, player3Id, player4Id, totalAmount, date } = req.body;
 
     if (!payerId || !player1Id || !player2Id || !player3Id || !player4Id || !totalAmount || !date) {
-      return res.status(400).json({ error: "Missing required fields" });
+      res.status(400).json({ error: "Missing required fields" });
+      return;
     }
 
     const total = parseFloat(totalAmount);
@@ -109,13 +110,13 @@ router.post("/court-bookings", async (req, res) => {
   }
 });
 
-// DELETE court booking — reverses all fees
-router.delete("/court-bookings/:id", async (req, res) => {
+router.delete("/court-bookings/:id", async (req: Request, res: Response): Promise<void> => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const [booking] = await db.select().from(courtBookingsTable).where(eq(courtBookingsTable.id, id));
     if (!booking) {
-      return res.status(404).json({ error: "Court booking not found" });
+      res.status(404).json({ error: "Court booking not found" });
+      return;
     }
 
     const courtBets = await db.select().from(betsTable).where(eq(betsTable.courtBookingId, id));
@@ -124,7 +125,7 @@ router.delete("/court-bookings/:id", async (req, res) => {
 
     for (const bet of courtBets) {
       const betAmt = parseFloat(bet.amount);
-      // Reverse: give money back to fromPlayer (who owed), take from toPlayer (payer)
+
       const fromPlayer = playerMap.get(bet.fromPlayerId);
       if (fromPlayer) {
         const newBal = parseFloat(fromPlayer.balance) + betAmt;
@@ -135,6 +136,7 @@ router.delete("/court-bookings/:id", async (req, res) => {
         }).where(eq(playersTable.id, bet.fromPlayerId));
         playerMap.set(bet.fromPlayerId, { ...fromPlayer, balance: newBal.toFixed(2), courtBalance: newCourtBal.toFixed(2) });
       }
+
       const toPlayer = playerMap.get(bet.toPlayerId);
       if (toPlayer) {
         const newBal = parseFloat(toPlayer.balance) - betAmt;
